@@ -3,36 +3,49 @@ import threading
 from flask import Flask
 import telebot
 import requests
+import base64
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
+OPENAI_KEY = os.environ.get("OPENAI_KEY")
 bot = telebot.TeleBot(BOT_TOKEN)
 
 app = Flask(__name__)
 @app.route('/')
 def home():
-    return "Bot is running"
+    return "Bot is running - Analyzer mode"
 
 def get_gold_price():
     try:
-        # سعر الذهب العالمي
         r = requests.get("https://api.gold-api.com/price/XAU", timeout=10).json()
-        return f"{r['price']:.2f} $"
+        return f"{r['price']:.2f}"
     except:
-        return "غير متوفر حاليا"
+        return "غير متوفر"
 
 @bot.message_handler(commands=['start'])
-def start(m):
-    bot.send_message(m.chat.id, "اهلا بيك ببوت الذهب 💰\nدز /gold لمعرفة السعر")
+def start(message):
+    bot.reply_to(message, "هلا بيك حبيبي 👋\nدزلي سكرين للشارت وانا احلله الك بيع لو شراء 📈")
 
-@bot.message_handler(commands=['gold'])
-def gold(m):
-    price = get_gold_price()
-    bot.send_message(m.chat.id, f"💰 سعر اونصة الذهب الان: {price}")
-
-def run_flask():
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
-
-if __name__ == "__main__":
-    threading.Thread(target=run_flask).start()
-    print("Bot started...")
-    bot.infinity_polling()
+@bot.message_handler(content_types=['photo'])
+def analyze(message):
+    bot.reply_to(message, "⏳ جاي احلل الشارت... ثواني")
+    if not OPENAI_KEY:
+        bot.reply_to(message, "⚠️ لازم تضيف OPENAI_KEY في Render")
+        return
+    try:
+        file_info = bot.get_file(message.photo[-1].file_id)
+        file_url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_info.file_path}"
+        photo_bytes = requests.get(file_url).content
+        b64 = base64.b64encode(photo_bytes).decode('utf-8')
+        headers = {"Authorization": f"Bearer {OPENAI_KEY}", "Content-Type": "application/json"}
+        payload = {
+            "model": "gpt-4o",
+            "messages": [{
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "انت محلل فني محترف للذهب XAUUSD. حلل الشارت: حدد الترند، الدعم والمقاومة، وهل بيع او شراء مع الستوب والهدف. جاوب بالعراقي مختصر"},
+                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}"}}
+                ]
+            }],
+            "max_tokens": 600
+        }
+        r = requests.post("https://api.openai.com/v1/chat/completions", headers=headers,
