@@ -1,28 +1,26 @@
-import os
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+import os, threading
+from flask import Flask
+from telegram import Update
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
-BOT_TOKEN = os.environ.get("BOT_TOKEN")
+TOKEN = os.getenv("BOT_TOKEN")
+web = Flask(__name__)
 
-def start(update, context):
-    update.message.reply_text("دزلي سكرين الشارت 📸")
+@web.route("/")
+def home(): return "ok"
 
-def handle_photo(update, context):
-    update.message.reply_text("🔍 جاي احلل...")
-    txt = """
-📈 **الصفقة:**
-النوع: BUY شراء
-دخول: 2645.00
-ستوب: 2635.00
-هدف1: 2655.00
-هدف2: 2665.00
-"""
-    update.message.reply_text(txt)
+async def start(update, context):
+    await update.message.reply_text("هلا! دزلي صورة الشارت 📸")
 
-updater = Updater(BOT_TOKEN, use_context=True)
-dp = updater.dispatcher
-dp.add_handler(CommandHandler("start", start))
-dp.add_handler(MessageHandler(Filters.photo, handle_photo))
+async def photo(update, context):
+    await update.message.reply_text("✅ استلمت الصورة\nSELL من 4114 ستوپ 4125 هدف 4095")
 
-print("Bot running...")
-updater.start_polling()
-updater.idle()
+def run():
+    app = Application.builder().token(TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.PHOTO, photo))
+    app.run_polling()
+
+if __name__ == "__main__":
+    threading.Thread(target=run).start()
+    web.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
