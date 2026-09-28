@@ -1,5 +1,4 @@
 import os
-import threading
 from flask import Flask
 import telebot
 import requests
@@ -7,12 +6,13 @@ import base64
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 OPENAI_KEY = os.environ.get("OPENAI_KEY")
-bot = telebot.TeleBot(BOT_TOKEN)
 
+bot = telebot.TeleBot(BOT_TOKEN)
 app = Flask(__name__)
+
 @app.route('/')
 def home():
-    return "Bot is running - Analyzer mode"
+    return "Bot is running"
 
 def get_gold_price():
     try:
@@ -27,9 +27,9 @@ def start(message):
 
 @bot.message_handler(content_types=['photo'])
 def analyze(message):
-    bot.reply_to(message, "⏳ جاي احلل الشارت... ثواني")
+    bot.send_message(message.chat.id, "⏳ جاي احلل الشارت... ثواني")
     if not OPENAI_KEY:
-        bot.reply_to(message, "⚠️ لازم تضيف OPENAI_KEY في Render")
+        bot.send_message(message.chat.id, "⚠️ المفتاح ما مضاف بعد. دزلي الشارت هنا بهاي المحادثة وانا احلله الك مجانا")
         return
     try:
         file_info = bot.get_file(message.photo[-1].file_id)
@@ -48,4 +48,23 @@ def analyze(message):
             }],
             "max_tokens": 600
         }
-        r = requests.post("https://api.openai.com/v1/chat/completions", headers=headers,
+        r = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload, timeout=60)
+        result = r.json()['choices'][0]['message']['content']
+        price = get_gold_price()
+        bot.send_message(message.chat.id, f"💰 السعر: ${price}\n\n📊 التحليل:\n{result}")
+    except Exception as e:
+        bot.send_message(message.chat.id, f"صار خطأ: {e}")
+
+@bot.message_handler(func=lambda m: True)
+def price_handler(message):
+    price = get_gold_price()
+    bot.send_message(message.chat.id, f"سعر الذهب: ${price}\nدزلي صورة الشارت احلله 📈")
+
+# للتشغيل على Render
+import threading
+def run_bot():
+    bot.infinity_polling()
+threading.Thread(target=run_bot).start()
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=10000)
