@@ -1,29 +1,21 @@
 import os
+import logging
 from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
+logging.basicConfig(level=logging.INFO)
+
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("📸 دزلي صورة شارت الذهب وانا احللك")
+    await update.message.reply_text("✅ البوت اشتغل! اهلا مهدي رعد")
 
-async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🔍 جاري التحليل...")
-    await update.message.reply_text(
-        "📊 تحليل الشارت:\n\n"
-        "1- شوف الترند: صاعد لو نازل؟\n"
-        "2- حدد الدعم والمقاومة\n"
-        "3- لا تدخل الا بكسر واضح\n"
-        "4- الستوب 10 نقاط تحت الدعم\n"
-        "5- الهدف ضعف الستوب\n\n"
-        "💡 نصيحة: لا تعاكس الترند!"
-    )
-
-def main():
-    app = Application.builder().token(BOT_TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.PHOTO, photo_handler))
-    app.run_polling()
+async def gold(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("سعر الذهب اليوم: 450$ - قريبا نربطه بسعر حي")
 
 if __name__ == "__main__":
-    main()
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("gold", gold))
+    print("Bot is running...")
+    app.run_polling()
